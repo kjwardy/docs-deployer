@@ -1,0 +1,35 @@
+name: homelab-docs
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-docs:
+    runs-on: docs
+    steps:
+      - name: Repo checkout
+        uses: actions/checkout@v4
+
+      - name: Build MkDocs site
+        run: mkdocs build
+      
+      - name: Clear out existing docs dir
+        run: |
+          rm -rf /var/html/site
+        
+      - name: Move docs to /var/html/site
+        run: |
+          mv site/ /var/html/site
+
+      - name: Change access to docs
+        run: |
+          chmod -R 777 /var/html/site
+
+      - name: Reload Nginx config
+        run: |
+          echo ${{ secrets.RUNNER_PASSWORD }} | sudo -S systemctl reload nginx
