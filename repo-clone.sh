@@ -1,10 +1,13 @@
 #!/bin/bash
 
+# Initialise script timer
+script_start_time=$(date +%s)
+
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Check for REPO_URL arg
-if [ "$#" -ne 1 ]; then
+if [[ "$#" -ne 1 ]]; then
     echo "Usage: $0 <repo-url>"
     exit 1
 fi
@@ -33,7 +36,7 @@ else
 fi
 
 # Check if repo dir already exists
-if [ -d "$DEST_DIR" ]; then
+if [[ -d "$DEST_DIR" ]]; then
     echo "Target repo already exists, changing into directory..."
     cd "$DEST_DIR"
 
@@ -45,9 +48,29 @@ else
     echo "Cloning $REPO_NAME repo..."
     GIT_SSH_CMD="ssh -i ${SSH_KEY_PATH}" git clone ${REPO_URL}
     
-    if [ $? -eq 0 ]; then
+    if [[ $? -eq 0 ]]; then
         echo "Repository cloned successfully"
     else
         echo "Failed to clone the repository - please check your credentials and repo URL"
     fi
 fi
+
+# Build docs
+echo "Building docs..."
+cd $DEST_DIR
+mkdocs build
+
+# Clear existing docs and moving new docs
+rm -rf /var/html/site
+mv site/ /var/html/site
+chmod -R a+r /var/html/site
+
+# Reload Nginx config
+# //TODO - make sudo
+echo "Reloading Nginx configuration..."
+systemctl reload nginx
+
+# Calculate total time and finish
+script_end_time=$(date +%s)
+script_execution_time=$(($script_end_time - $script_start_time))
+echo "Done! Execution time: $script_execution_time seconds"
